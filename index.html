@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Einkaufsliste lokal</title>
+  <meta name="theme-color" content="#2f5f9e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Einkauf lokal">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <script>window.EK_LOKAL = true; // Daten nur auf diesem Gerät – kein GitHub</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="row">
+      <select id="listSel" aria-label="Liste auswählen"></select>
+      <button id="listMenuBtn" class="icon" title="Listen verwalten" aria-label="Listen verwalten">☰</button>
+      <button id="syncBtn" class="sync" title="Jetzt abgleichen"><span id="syncDot" class="dot"></span><span id="syncText">…</span></button>
+      <button id="settingsBtn" class="icon" title="Einstellungen" aria-label="Einstellungen">⚙</button>
+    </div>
+    <form id="addForm" class="row add" autocomplete="off">
+      <input id="name" placeholder="Artikel, z. B. Milch" aria-label="Artikel" required enterkeyhint="done" autocomplete="off" autocapitalize="sentences">
+      <input id="qty" placeholder="Menge" aria-label="Menge" enterkeyhint="done" autocomplete="off" inputmode="decimal">
+      <select id="cat" aria-label="Kategorie"></select>
+      <button id="pickBtn" type="button" class="icon" title="Aus Symbolen auswählen" aria-label="Aus Symbolen auswählen">🧺</button>
+      <button id="micBtn" type="button" class="icon" title="Artikel ansagen" aria-label="Artikel ansagen">🎤</button>
+      <button type="submit" class="primary">+</button>
+    </form>
+    <div id="updBar" class="upd" hidden>
+      <span id="updText"></span>
+      <button id="updNews" type="button" class="secondary">Was ist neu?</button>
+      <button id="updBtn" type="button" class="primary">Aktualisieren</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="open"></div>
+    <p id="empty" class="muted" hidden>Die Liste ist leer.</p>
+    <details id="doneBox" hidden>
+      <summary>Im Wagen (<span id="doneCount">0</span>)</summary>
+      <div id="done"></div>
+      <button id="clearDone" class="secondary">Erledigte entfernen</button>
+    </details>
+  </main>
+
+  <dialog id="newsDlg">
+    <div class="pickhead">
+      <h2 id="newsHead">Neuigkeiten</h2>
+    </div>
+    <div id="newsBody"></div>
+  </dialog>
+
+  <dialog id="editDlg">
+    <form method="dialog">
+      <h2 id="edTitel">Artikel ändern</h2>
+      <label>Artikel <input id="edName" required autocomplete="off" enterkeyhint="done"></label>
+      <div class="row mengezeile">
+        <label>Menge <input id="edQty" placeholder="z. B. 2" autocomplete="off" enterkeyhint="done" inputmode="decimal"></label>
+        <label>Einheit <select id="edUnit"></select></label>
+      </div>
+      <label>Kategorie <select id="edCat"></select></label>
+      <div class="row">
+        <button value="save" class="primary">Speichern</button>
+        <button value="cancel" formnovalidate class="secondary">Abbrechen</button>
+      </div>
+      <button id="edDel" value="del" formnovalidate class="danger wide">Von der Liste löschen</button>
+    </form>
+  </dialog>
+
+  <dialog id="pickDlg">
+    <div class="pickhead">
+      <input id="pickSearch" type="search" placeholder="Suchen …" aria-label="Artikel suchen">
+      <button id="pickEdit" type="button" class="icon" title="Auswahl bearbeiten" aria-label="Auswahl bearbeiten" aria-pressed="false">✎</button>
+      <button id="pickFertig" type="button" class="primary" autofocus>Fertig</button>
+      <button id="pickDone" type="button" class="xbtn inline" title="Schließen" aria-label="Schließen">✕</button>
+    </div>
+    <p id="pickHint" class="muted pickhint"></p>
+    <div id="pickGrid"></div>
+  </dialog>
+
+  <dialog id="katDlg">
+    <form method="dialog">
+      <h2 id="katHead">Auswahl-Eintrag ändern</h2>
+      <label>Name <input id="katName" required autocomplete="off" enterkeyhint="done"></label>
+      <label>Symbol <input id="katIcon" placeholder="z. B. 🍎 – leer = 🛒 Einkaufswagen" autocomplete="off" maxlength="8"></label>
+      <div class="bildzeile">
+        <div id="katVorschau" class="vorschau" title="Vorschau"></div>
+        <button type="button" id="katSymbolWahl" class="secondary" aria-expanded="false">🍎 Symbole</button>
+        <button type="button" id="katFoto" class="secondary">📷 Foto</button>
+        <button type="button" id="katBildWahl" class="secondary">🖼 Galerie</button>
+        <button type="button" id="katBildWeg" class="secondary" title="Bild entfernen" aria-label="Bild entfernen">✕</button>
+        <input id="katBildDatei" type="file" accept="image/*" hidden>
+        <input id="katFotoDatei" type="file" accept="image/*" capture="environment" hidden>
+      </div>
+      <div id="katSymbole" class="symbolwahl" hidden></div>
+      <label>Kategorie <select id="katCat"></select></label>
+      <div class="row">
+        <button value="save" class="primary">Speichern</button>
+        <button value="cancel" formnovalidate class="secondary">Abbrechen</button>
+      </div>
+      <button id="katDel" value="aus" formnovalidate class="danger wide">Aus der Auswahl entfernen</button>
+      <p class="muted">„🍎 Symbole“ zeigt alle vorhandenen Symbole zum Antippen. Ein eigenes Bild ersetzt das Symbol – in der Auswahl 🧺 und in der Liste. Foto oder Bild aus der Galerie, es wird automatisch klein zugeschnitten.</p>
+    </form>
+  </dialog>
+
+  <dialog id="listDlg">
+    <h2>Listen</h2>
+    <h3>Reihenfolge in „<span id="sortList"></span>“</h3>
+    <select id="sortSel" aria-label="Sortierung"></select>
+    <h3>Kategorienliste für „<span id="ksetList"></span>“</h3>
+    <div class="row ksetzeile">
+      <select id="ksetSel" aria-label="Kategorienliste"></select>
+      <button id="ksetRename" type="button" class="icon" title="Kategorienliste umbenennen" aria-label="Kategorienliste umbenennen">✎</button>
+      <button id="ksetDel" type="button" class="icon loeschen" title="Kategorienliste löschen" aria-label="Kategorienliste löschen">✕</button>
+    </div>
+    <div class="row ksetzeile">
+      <button id="ksetNeu" type="button" class="secondary">＋ Neue (leer)</button>
+      <button id="ksetKopie" type="button" class="secondary">⧉ Als Kopie</button>
+    </div>
+    <p id="ksetInfo" class="muted"></p>
+    <div id="catBox">
+      <p id="catHead" class="muted">Kategorien so ordnen, wie du durch den Laden gehst:</p>
+      <div id="catOrder"></div>
+      <button id="newCat" type="button" class="primary">＋ Kategorie hinzufügen</button>
+      <button id="resetCats" type="button" class="secondary">Standard-Reihenfolge</button>
+      <p class="muted">Die Kategorien gehören zur Kategorienliste – mehrere Listen können dieselbe nutzen. Die Reihenfolge stellt jede Liste selbst ein. ✎ = umbenennen, ✕ = löschen (Artikel darin landen unter „Sonstiges“).</p>
+    </div>
+    <hr>
+    <button id="newList" class="primary">Neue Liste</button>
+    <button id="renameList" class="secondary">Aktuelle Liste umbenennen</button>
+    <button id="deleteList" class="danger">Aktuelle Liste löschen</button>
+    <form method="dialog"><button class="secondary">Schließen</button></form>
+  </dialog>
+
+  <dialog id="setDlg">
+    <form id="setForm" method="dialog">
+      <h2>Einstellungen</h2>
+      <p id="lokalInfo" class="muted" hidden>Lokale Version: Alles wird nur auf diesem Gerät gespeichert – kein GitHub, kein Teilen. Mit „Sichern“ regelmäßig eine Sicherung anlegen.</p>
+      <label>Dein Name <input id="cfgUser" placeholder="z. B. Thomas"></label>
+      <div id="ghBox">
+      <label>GitHub-Konto (Besitzer) <input id="cfgOwner" placeholder="GitHub-Konto" required></label>
+      <label>Daten-Repo <input id="cfgRepo" placeholder="einkaufsliste-daten" required></label>
+      <label>Zugriffstoken oder Einrichtungslink <input id="cfgToken" type="password" placeholder="github_pat_… oder Link einfügen" required></label>
+      <p class="muted">Das Token bleibt nur auf diesem Gerät gespeichert.</p>
+      </div>
+      <div class="row">
+        <button value="save" class="primary">Speichern</button>
+        <button value="cancel" formnovalidate class="secondary">Abbrechen</button>
+      </div>
+      <button type="button" id="copyLink" class="secondary">Einrichtungslink für Familie kopieren</button>
+      <hr>
+      <h3>Sicherung</h3>
+      <div class="row">
+        <button type="button" id="sichern" class="secondary">💾 Sichern</button>
+        <button type="button" id="wiederBtn" class="secondary">📂 Einlesen</button>
+      </div>
+      <input type="file" id="wiederDatei" accept=".json,application/json" hidden>
+      <p class="muted">„Sichern“ speichert alle Listen als Datei. „Einlesen“ übernimmt eine Sicherung – vorhandene Einträge bleiben erhalten, jeweils der neuere Stand gewinnt. So lassen sich Listen auch zwischen Windows-PC und Handy übertragen.</p>
+      <hr>
+      <p id="verText" class="muted"></p>
+      <button type="button" id="checkUpd" class="secondary">Nach Updates suchen</button>
+      <button type="button" id="newsBtn" class="secondary wide">Neuigkeiten – was hat sich geändert?</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+    <span id="toastText"></span>
+    <button id="toastUndo" type="button" class="secondary" hidden>Rückgängig</button>
+    <button id="toastZu" type="button" class="xbtn inline" aria-label="Hinweis schließen">✕</button>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
