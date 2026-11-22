@@ -1,0 +1,28 @@
+{
+  "name": "einkaufsliste-lokal",
+  "productName": "Einkaufsliste lokal",
+  "version": "1.0.0",
+  "description": "Einkaufsliste – Daten nur auf diesem PC",
+  "author": "racerman76",
+  "main": "main.js",
+  "private": true,
+  "devDependencies": {
+    "electron": "^38.8.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "de.racerman76.einkaufsliste.lokal",
+    "productName": "Einkaufsliste lokal",
+    "files": ["main.js", "preload.js", "app/**/*"],
+    "win": { "target": "nsis", "icon": "app/icons/icon-512.png" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Einkaufsliste lokal",
+      "artifactName": "Einkaufsliste-lokal-Setup.exe"
+    },
+    "directories": { "output": "dist" }
+  }
+}
